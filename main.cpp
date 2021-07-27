@@ -1,11 +1,11 @@
 #include <iostream>
-#include <cstring>
+#include <thread>
+#include <vector>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <string.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include "utils.h"
+#include "vanillaTCP.h"
 
 int main(int argc, char *argv[]) {
 
@@ -18,32 +18,24 @@ int main(int argc, char *argv[]) {
     int startPort = atoi(argv[2]);
     int endPort = atoi(argv[3]);
 
-    struct sockaddr_in target_addr = {0};
-    int sock = 0;
+    struct sockaddr_in targetAddr = {0};
 
-    target_addr.sin_family = AF_INET;   //IPv4
-
-    // inet_pton converts IPv4 adresses from text to binary form
-    if (inet_pton(AF_INET, target, &target_addr.sin_addr) <= 0) {   //inet_pton copies the target ip to target_addr.sin_addr
+    // targetAddr setup.
+    if (inet_pton(AF_INET, target, &targetAddr.sin_addr) <= 0) {   //inet_pton copies the target ip to targetAddr.sin_addr
         std::cout << "Error converting target ip address to binary form." << std::endl;
         return -1;
     }
+    targetAddr.sin_family = AF_INET;   //IPv4
 
+    // spawn a thread for each socket
+    std::vector<std::thread> threads;
     for (int i = startPort; i < endPort; i++){
-        target_addr.sin_port = htons(i);
-        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) <0) {
-            std::cout << "Error creating socket: ";
-            std::cout << std::strerror(errno) << std::endl;
-            return -1;
-        }
-        if (connect(sock, (struct sockaddr*)&target_addr, sizeof(target_addr)) < 0){
-            std::cout << "Port " << i << " closed: ";
-            std::cout << std::strerror(errno) << std::endl;
-        }
-        else{
-            std::cout << "Port " << i << " open " << std::endl;
-        }
-        close(sock);
+        //create threads and wait for each of them to return
+        TCPScanner * tcpscannerPtr = new TCPScanner(&targetAddr);
+        threads.emplace_back(std::thread(&TCPScanner::scan, tcpscannerPtr, i));
+    }
+    for (std::thread &th : threads){
+        th.join();
     }
 
     return 0;
