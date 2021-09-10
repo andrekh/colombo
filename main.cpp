@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
     std::vector<std::thread> threads;
     for (int i = startPort; i < endPort; i++){
         //create threads and wait for each of them to return
-        TCPScanner * tcpscannerPtr = new TCPScanner(&targetAddr);
-        threads.emplace_back(std::thread(&TCPScanner::scan, tcpscannerPtr, i));
+        TCPScanner tcpscanner = TCPScanner(&targetAddr);
+        threads.emplace_back(std::thread(&TCPScanner::scan, tcpscanner, i));
     }
     for (std::thread &th : threads){
         th.join();
